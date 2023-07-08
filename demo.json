@@ -1,6 +1,7 @@
 [
     {
-        "name":"fourier",
+        "name":"fourier series",
+        "description":"have no description now",
         "path":"./demo/fourier.html"
     }
 ]

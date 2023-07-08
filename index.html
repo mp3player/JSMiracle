@@ -4,12 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <style>
+        *{padding:0;margin:0;}
+        html,body{ width : 100% ; height : 100% }
+        .page{display:flex;width:100%;height:100%;}
+        .page .nav {
+            width : 20%;height:100%;min-width:200px;max-width:300px;border-right:0px;
+            box-shadow: 0px 0px 10px 0px rgba(0,0,0,.2);
+        }
+
+        .page .nav ul {
+            list-style: none;
+        }
+        .page .nav ul li {
+            font-size: 24px;margin:10px 10px;border-bottom:1px solid rgba(0,0,0,.2);
+        }
+        .page .nav ul li a { text-decoration: none;}
+
+        .page .content {
+            flex-grow: 1;background:none;
+        }
+
+        .page .content iframe {
+            width:100%;height:calc(100% - 4px);
+        }
+    </style>
 </head>
 <body>
     <script>
         fetch("demo.json")
             .then( d => d.json() )
-            .then( d => console.log(d) )
+            .then( d => {
+                let navList = document.querySelector('.nav-list');
+                d.forEach(item => {
+                    console.log(item)
+                    let li = document.createElement('li');
+                    let a = document.createElement('a');
+                    // a.href = item.path;
+                    a.setAttribute('link',item.path)
+                    a.innerHTML = item.name;
+                    a.title = item.description;
+                    a.setAttribute('type','link')
+                    li.appendChild(a);
+                    navList.append( li );
+                })
+            } )
+        document.onmousedown = (e )=>{
+            let target = e.target;
+            let type = target.getAttribute('type');
+            if( type == null ) return ;
+
+            let link = target.getAttribute('link');
+            document.querySelector('iframe').src = link;
+
+        }
+        // render page
     </script>
+    <div class="page">
+        <div class="nav">
+            <ul class="nav-list">
+                
+            </ul>
+        </div>
+        <div class="content">
+            <iframe src="" frameborder="0"></iframe>
+        </div>
+    </div>
 </body>
 </html>
