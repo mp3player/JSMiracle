@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script src="../lib/pen.js"></script>
+    <script src="../lib/complex.js"></script>
+    <script>
+        class AnimateIDFT{
+            constructor(freq){
+                this.freq = freq;
+                this.circles = [];
+                this.axes = [];
+                this.outline = [];
+                this.finished = false;
+                this.k = 0;
+                this.N = freq.length;
+
+                this.init(freq);
+            }
+            init(freq){
+                for(let i = 0 ; i < this.N ; ++ i){
+                    this.circles.push([0,0,0]);
+                    this.axes.push([0,0]);
+                }
+            }
+            draw(){
+                for(let i = 0 ; i< this.N ; ++ i){
+                    let circle = this.circles[i];
+                    Draw.drawCircle( ...circle );
+                }
+                Draw.drawLine(this.axes);
+                if(this.outline.length > 0)
+                Draw.drawLine(this.outline,'red',4);
+            }
+            next(){
+                let N = this.N;
+                let x = new Complex();
+                this.axes[0] = [0,0];
+                for (let i = 0 ; i < N ; ++ i){
+                    let c = this.freq[i].mul(Complex.Euler(2. * Math.PI * this.k * i / N));
+                    let next = x.add(c);
+                    this.axes[i + 1] = (next.scale( 1 / N)).toArray();
+                    let center = x.scale(1 / N).toArray();
+                    let r = c.scale(1 / N).length();
+                    this.circles[i] = [...center , r];
+                    x = next;
+                }
+                if(this.outline.length < N){
+                    this.outline.push( x.scale(1 / N).toArray() )
+                }
+                this.k = (this.k + 1) % N;
+                if(this.k == 0) this.finished = true;
+            }
+            render(){
+                let animateLoop = () => {
+                    requestAnimationFrame(animateLoop);
+                    Draw.mask();
+                    this.draw();
+                    this.next();
+
+                }
+                animateLoop();
+            }
+        }
+
+        class FourierSeries{
+            constructor( config = {} ){
+                config = {
+                    ...{
+                        coefCallback : ( k ) => { return Math.pow( -1 , k + 1 ) / k; } , 
+                        angleCallback : ( k , seta ) => { return k * seta } , 
+                        speed : .01 , 
+                        size : 50.0 , 
+                        precise : 5 , 
+                        buffer : 200
+                    } , 
+                    ...config 
+                };
+                this.coefCallback = config.coefCallback;
+                this.angleCallback = config.angleCallback
+                this.speed = config.speed ;
+                this.size = config.size;
+                this.precise = config.precise;
+                this.buffer = config.buffer;
+                this.circleColor = 'rgba(255,0,0,.8)';
+                this.axisColor = this.circleColor;
+            }
+
+            render(){
+                let lines = [];
+                let i = 0 ; 
+                let animate = () => {
+
+                    requestAnimationFrame( animate );
+
+                    Draw.mask();
+
+                    i += this.speed;
+
+                    let x0 = 0 , y0 = 0 ;
+                    let x1 = 0 , y1 = 0;
+
+                    let seta = i;
+
+                    for( let k = 1 ; k < this.precise + 1; ++ k ){
+                        let coef = this.coefCallback( k );
+                        let angle = this.angleCallback( k , seta );
+                        let cos = Math.cos( angle );
+                        let sin = Math.sin( angle );
+
+                        // scale coefficient
+                        let r = coef * this.size; 
+                        // rotate the vector 
+                        x1 = r * cos;
+                        y1 = r * sin;
+
+                        let start = [ x0 , y0 ] , end = [x0 + x1 , y0 + y1];
+
+                        Draw.drawLine( [ start , end ] , this.axisColor )
+                        Draw.drawCircle( ...start , Math.abs( r ) , this.circleColor )
+                        x0 += x1, y0 += y1;
+                    }
+                    lines.unshift( y0 )
+                    if( lines.length > this.buffer ) lines.pop();
+                    for( let i = 0 ; i < lines.length - 1 ; ++ i ){
+                        let alpha = Math.sqrt( 1 - 1 / lines.length * i );
+
+                        let color = `rgba(255,255,255,${ alpha })`
+                        Draw.drawLine( [ [ ( this.size + this.buffer - i ) * .5 , lines[i] ] , [ ( this.size + this.buffer - i - 1 ) * .5 , lines[i + 1] ] ] , color  )
+                    }
+                    Draw.drawLine([ [x0,y0],[ this.size * .5 + this.buffer * .5 , y0]])
+                };
+
+                animate();
+            }
+        }
+    </script>
+    <script>
+
+        const canvas = document.querySelector('#canvas');
+        canvas.width = innerWidth;
+        canvas.height = innerHeight;
+        const pen = canvas.getContext('2d');
+        const WIDTH = canvas.width;
+        const HEIGHT = canvas.height;   // the size of the canvas
+        const COLOR = 'rgba(255,255,255,.7)';          // default color for the pen
+        const SCALE = 20;               //the scale factor of the shape
+        const LW = 2                   // the default linewidth,
+        //transform the origin of the canvas
+        
+        pen.setTransform(1,0,0,-1,WIDTH / 2,HEIGHT / 2)
+        Draw.pen = pen;
+
+        // generate signal , step is t 
+        let points = []
+        for(let t = 0 ; t < Math.PI * 2 ; t += .02){
+            let x = 16 * Math.pow(Math.sin(t) , 3.0) * SCALE;
+            let y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos( 4 * t)) * SCALE;
+            points.push(new Complex(x,y));
+        }
+        let freq = DFT(points);
+
+        // let animateIDFT = new AnimateIDFT(freq);
+
+        // animateIDFT.render();
+
+        // 
+    </script>
+
+    <script>
+        const stepFunction = {
+            coef : ( k ) => { return 1 / ( 2 * k - 1) ; } ,
+            angle : ( k , seta ) => { return ( 2 * k - 1 ) / 2 * Math.PI * seta; }
+        }
+
+        let series = new FourierSeries( { coefCallback : stepFunction.coef , angleCallback : stepFunction.angle } );
+        series.render();
+    </script>
+</body>
+</html>
